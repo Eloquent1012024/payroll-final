@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Gmail Payroll Portal</title>
+    <style>
+        body { font-family: sans-serif; background: #eef2f7; padding: 20px; }
+        .container { max-width: 750px; margin: auto; background: white; padding: 25px; border-radius: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+        .status-bar { background: #f8f9fa; padding: 10px; border-left: 5px solid #4285f4; margin-bottom: 20px; font-weight: bold; }
+        input, textarea { width: 100%; margin: 10px 0; padding: 12px; border: 1px solid #ddd; border-radius: 5px; box-sizing: border-box; }
+        .btn { width: 100%; padding: 15px; border: none; border-radius: 5px; cursor: pointer; font-size: 16px; color: white; }
+        .btn-blue { background: #4285f4; }
+        .btn-green { background: #34a853; margin-top: 10px; }
+        .logs { background: #1e1e1e; color: #00ff00; padding: 15px; border-radius: 5px; height: 180px; overflow-y: auto; margin-top: 20px; font-family: monospace; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>Gmail Payroll Dashboard</h2>
+        <div class="status-bar">Status: {{ data.status }}</div>
+
+        <form method="POST" enctype="multipart/form-data">
+            <h3>1. Scrape Leads</h3>
+            <input type="file" name="source_file">
+            <button type="submit" name="scrape" class="btn btn-blue">Extract Leads to CSV</button>
+
+            <hr style="margin: 30px 0;">
+
+            <h3>2. Send Emails</h3>
+            <input type="text" name="subject" value="{{ data.subject }}">
+            <textarea name="message" rows="5">{{ data.message }}</textarea>
+            
+            <label>SMTP File (email:app_password):</label>
+            <input type="file" name="smtp_file">
+            
+            <label>Leads CSV File:</label>
+            <input type="file" name="csv_file">
+            
+            <button type="submit" name="send_emails" class="btn btn-green">Start Sending Sequence</button>
+        </form>
+
+        {% if data.logs %}
+        <div class="logs">
+            {% for log in data.logs %}<div>{{ log }}</div>{% endfor %}
+        </div>
+        {% endif %}
+    </div>
+</body>
+</html>
