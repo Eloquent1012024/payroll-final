@@ -18,48 +18,43 @@ def send_payroll():
             return
 
         try:
-            # We read the raw lines, including the blank ones
             content = file.stream.read().decode("utf-8")
-            all_lines = content.splitlines()
-            
-            # Remove trailing whitespace but keep the empty lines
-            lines = [l.strip() for l in all_lines]
+            # Get every line that actually has text, ignoring all blank lines
+            lines = [l.strip() for l in content.splitlines() if l.strip()]
             
             today = datetime.now().strftime("%d %b %Y")
             count = 0
             
-            # We look for 'Scoop' to start a new block
+            # We search for the email address as the "Start" of a block
             for i in range(len(lines)):
-                if "Scoop" in lines[i]:
+                if "@" in lines[i]:
                     try:
-                        # Follows your Notepad screenshot layout:
-                        # Scoop (i)
-                        # Email (i+1)
-                        # [Blank Line] (i+2)
-                        # Name (i+3)
-                        # Position (i+4)
-                        # Company (i+5)
-                        
-                        boss = lines[i]
-                        email = lines[i+1]
-                        staff = lines[i+3]
-                        pos = lines[i+4]
-                        comp = lines[i+5]
+                        # Based on Capture_6.PNG:
+                        # The line BEFORE the email is the Boss (Scoop)
+                        # The lines AFTER the email are Name, Position, Company
+                        boss = lines[i-1] if i > 0 else "Scoop"
+                        email = lines[i]
+                        staff = lines[i+1]
+                        pos = lines[i+2]
+                        comp = lines[i+3]
 
-                        yield f"<b>[{today}]</b> Processing...<br>"
+                        yield f"<b>[{today}]</b> Extracting...<br>"
                         yield f"👤 Boss: {boss}<br>"
-                        yield f"📧 HR: {email}<br>"
+                        yield f"📧 Email: {email}<br>"
                         yield f"👤 Staff: {staff}<br>"
                         yield f"🛠️ Pos: {pos}<br>"
                         yield f"🏢 Co: {comp}<br>"
                         yield "--------------------------<br>"
                         
                         count += 1
-                        time.sleep(0.3)
+                        time.sleep(0.2)
                     except IndexError:
                         continue
 
-            yield f"<br><b>Finished! {count} leads captured.</b>"
+            if count == 0:
+                yield "⚠️ No leads found. Check if your file matches the screenshot.<br>"
+            else:
+                yield f"<br><b>Done! {count} leads processed.</b>"
         except Exception as e:
             yield f"❌ Error: {str(e)}<br>"
 
