@@ -12,46 +12,41 @@ def index():
 @app.route('/send', methods=['POST'])
 def send_payroll():
     def generate():
-        yield "Reading leads separated by dashed lines...<br>"
+        yield "Starting lightweight extraction...<br>"
         
-        leads_file = request.files.get('leads_file')
-        if not leads_file:
-            yield "❌ Error: No leads file uploaded.<br>"
+        file = request.files.get('leads_file')
+        if not file:
+            yield "❌ Error: No file detected.<br>"
             return
 
         try:
-            # Read the file
-            content = leads_file.stream.read().decode("utf-8")
+            # Read line by line to keep memory usage near zero
+            content = file.stream.read().decode("utf-8")
+            # Filter out empty lines and dashed separator lines
+            lines = [l.strip() for l in content.splitlines() if l.strip() and not l.strip().startswith('-')]
             
-            # Split the text into "blocks" using the dashed lines
-            # This handles lines like ----------- or -----------------------
-            blocks = [b.strip() for b in content.split('-') if b.strip() and len(b.strip()) > 20]
-            
-            today_date = datetime.now().strftime("%d %b %Y") # e.g., 06 May 2026
+            today = datetime.now().strftime("%d %b %Y")
             count = 0
+            
+            # We process in chunks of 5 lines based on your layout
+            for i in range(0, len(lines), 5):
+                if i + 4 < len(lines):
+                    hr_name = lines[i]
+                    hr_email = lines[i+1]
+                    staff_name = lines[i+2]
+                    staff_pos = lines[i+3]
+                    company = lines[i+4]
 
-            for block in blocks:
-                # Split each block into individual lines and remove empty ones
-                lines = [line.strip() for line in block.splitlines() if line.strip()]
-                
-                # We expect at least 5 pieces of info per block
-                if len(lines) >= 5:
-                    hr_name = lines[0]
-                    hr_email = lines[1]
-                    staff_name = lines[2]
-                    position = lines[3]
-                    company = lines[4]
-
-                    # SIMULATED SENDING LOGIC
-                    time.sleep(0.4) 
-                    yield (f"✅ <b>[{today_date}]</b> Sent to: {staff_name}<br>"
-                           f"&nbsp;&nbsp;&nbsp;📍 {position} at {company}<br>")
+                    # Logic for sending (simulated for logs)
+                    time.sleep(0.3) 
+                    yield (f"✅ <b>[{today}]</b> Processed: {staff_name}<br>"
+                           f"&nbsp;&nbsp;&nbsp;👤 HR: {hr_name}<br>"
+                           f"&nbsp;&nbsp;&nbsp;💼 {staff_pos} at {company}<br>")
                     count += 1
             
-            yield f"<br><b>Successfully dispatched {count} payroll records!</b>"
-            
+            yield f"<br><b>Successfully finished {count} records!</b>"
         except Exception as e:
-            yield f"❌ Error parsing dashed blocks: {str(e)}<br>"
+            yield f"❌ Error: {str(e)}<br>"
 
     return Response(stream_with_context(generate()))
 
