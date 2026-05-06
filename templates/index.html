@@ -3,28 +3,26 @@
 <head>
     <title>Payroll Dispatcher</title>
     <style>
-        body { font-family: sans-serif; background: #f8f9fa; padding: 30px; display: flex; justify-content: center; }
-        .card { background: white; padding: 25px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); width: 100%; max-width: 500px; }
-        #log { margin-top: 20px; background: #111; color: #39FF14; padding: 15px; height: 300px; overflow-y: auto; font-family: monospace; font-size: 13px; border-radius: 5px; line-height: 1.5; }
+        body { font-family: sans-serif; background: #f4f4f4; padding: 40px; display: flex; justify-content: center; }
+        .container { background: white; padding: 25px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); width: 500px; }
+        #log { margin-top: 20px; background: #000; color: #00ff00; padding: 15px; height: 350px; overflow-y: auto; font-family: monospace; border-radius: 5px; line-height: 1.4; }
         button { width: 100%; padding: 12px; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 16px; }
     </style>
 </head>
 <body>
-    <div class="card">
+    <div class="container">
         <h2>Payroll Dispatcher</h2>
-        <p style="color: #666; font-size: 0.9em;">Upload your vertical .txt file</p>
-        <input type="file" id="fileInput" style="margin-bottom: 20px;">
-        <button onclick="upload()">Start Dispatch</button>
-        <div id="log">> System Ready...</div>
+        <input type="file" id="leads" style="margin-bottom: 20px;">
+        <button onclick="start()">Start Dispatch</button>
+        <div id="log">> Awaiting file...</div>
     </div>
 
     <script>
-        async function upload() {
-            const file = document.getElementById('fileInput').files[0];
+        async function start() {
+            const file = document.getElementById('leads').files[0];
             if(!file) return alert("Select file!");
-            
             const log = document.getElementById('log');
-            log.innerHTML = "> Reading file lines...<br>";
+            log.innerHTML = "> Processing file...<br>";
             
             const data = new FormData();
             data.append('leads_file', file);

@@ -12,39 +12,41 @@ def index():
 @app.route('/send', methods=['POST'])
 def send_payroll():
     def generate():
-        yield "Starting lightweight extraction...<br>"
-        
         file = request.files.get('leads_file')
         if not file:
-            yield "❌ Error: No file detected.<br>"
+            yield "❌ No file uploaded.<br>"
             return
 
         try:
-            # Read line by line to keep memory usage near zero
             content = file.stream.read().decode("utf-8")
-            # Filter out empty lines and dashed separator lines
+            # Filter out empty lines and those dashed separator lines
             lines = [l.strip() for l in content.splitlines() if l.strip() and not l.strip().startswith('-')]
             
             today = datetime.now().strftime("%d %b %Y")
             count = 0
             
-            # We process in chunks of 5 lines based on your layout
+            # This follows your exact 5-line vertical pattern
             for i in range(0, len(lines), 5):
                 if i + 4 < len(lines):
-                    hr_name = lines[i]
-                    hr_email = lines[i+1]
-                    staff_name = lines[i+2]
-                    staff_pos = lines[i+3]
-                    company = lines[i+4]
+                    # Capturing the actual data from your lines
+                    boss_name = lines[0]     # Line 1
+                    hr_email = lines[1]      # Line 2
+                    staff_name = lines[2]    # Line 3
+                    staff_pos = lines[3]     # Line 4
+                    company_name = lines[4]  # Line 5
 
-                    # Logic for sending (simulated for logs)
+                    # This prints the REAL data to your screen
+                    yield f"<b>[{today}]</b> Sending Payroll...<br>"
+                    yield f"From: {boss_name} ({hr_email})<br>"
+                    yield f"To: {staff_name}<br>"
+                    yield f"Position: {staff_pos}<br>"
+                    yield f"Company: {company_name}<br>"
+                    yield "--------------------------<br>"
+                    
                     time.sleep(0.3) 
-                    yield (f"✅ <b>[{today}]</b> Processed: {staff_name}<br>"
-                           f"&nbsp;&nbsp;&nbsp;👤 HR: {hr_name}<br>"
-                           f"&nbsp;&nbsp;&nbsp;💼 {staff_pos} at {company}<br>")
                     count += 1
             
-            yield f"<br><b>Successfully finished {count} records!</b>"
+            yield f"<br><b>Successfully dispatched {count} records!</b>"
         except Exception as e:
             yield f"❌ Error: {str(e)}<br>"
 
