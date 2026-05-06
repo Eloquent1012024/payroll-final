@@ -1,43 +1,58 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>Payroll Dispatcher</title>
+    <meta charset="UTF-8">
+    <title>Payroll Dispatcher Pro</title>
     <style>
-        body { font-family: 'Segoe UI', sans-serif; background: #f0f2f5; padding: 40px; display: flex; justify-content: center; }
-        .card { background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.1); width: 100%; max-width: 500px; }
-        #log { margin-top: 20px; background: #000; color: #00ff00; padding: 15px; height: 350px; overflow-y: auto; font-family: monospace; border-radius: 8px; font-size: 13px; line-height: 1.5; }
-        button { width: 100%; padding: 14px; background: #1a73e8; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 16px; font-weight: bold; }
+        body { font-family: 'Segoe UI', Tahoma, sans-serif; background: #f4f7f6; display: flex; justify-content: center; padding: 50px; }
+        .app-card { background: white; padding: 30px; border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); width: 100%; max-width: 500px; }
+        h2 { color: #2c3e50; text-align: center; margin-bottom: 20px; }
+        #log-window { margin-top: 20px; background: #1a1a1a; color: #00ff41; padding: 20px; height: 300px; overflow-y: auto; font-family: 'Consolas', monospace; font-size: 13px; border-radius: 10px; border: 1px solid #333; line-height: 1.6; }
+        button { width: 100%; padding: 15px; background: #3498db; color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; transition: 0.3s; }
+        button:hover { background: #2980b9; }
+        input[type="file"] { margin-bottom: 20px; width: 100%; }
     </style>
 </head>
 <body>
-    <div class="card">
-        <h2 style="color: #1a73e8;">Payroll Dispatcher</h2>
-        <input type="file" id="leads" style="margin-bottom: 20px; display: block;">
-        <button onclick="start()">Start Dispatch</button>
-        <div id="log">> Awaiting your Notepad file...</div>
-    </div>
 
-    <script>
-        async function start() {
-            const file = document.getElementById('leads').files[0];
-            if(!file) return alert("Please select a file!");
-            const log = document.getElementById('log');
-            log.innerHTML = "> Reading Notepad format...<br>";
-            
-            const data = new FormData();
-            data.append('leads_file', file);
-            
-            const res = await fetch('/send', { method: 'POST', body: data });
-            const reader = res.body.getReader();
+<div class="app-card">
+    <h2>Payroll Dispatcher</h2>
+    <input type="file" id="payrollFile">
+    <button onclick="startDispatch()">Launch Process</button>
+    <div id="log-window">> System standby...</div>
+</div>
+
+<script>
+    async function startDispatch() {
+        const fileInput = document.getElementById('payrollFile');
+        const log = document.getElementById('log-window');
+        
+        if (!fileInput.files[0]) {
+            alert("Please upload your .txt leads file first!");
+            return;
+        }
+
+        log.innerHTML = "> Establishing connection...<br>";
+        
+        const formData = new FormData();
+        formData.append('leads_file', fileInput.files[0]);
+
+        try {
+            const response = await fetch('/send', { method: 'POST', body: formData });
+            const reader = response.body.getReader();
             const decoder = new TextDecoder();
-            
+
             while (true) {
-                const {done, value} = await reader.read();
+                const { done, value } = await reader.read();
                 if (done) break;
                 log.innerHTML += decoder.decode(value);
                 log.scrollTop = log.scrollHeight;
             }
+        } catch (err) {
+            log.innerHTML += "<br>❌ Connection Error: " + err;
         }
-    </script>
+    }
+</script>
+
 </body>
 </html>
