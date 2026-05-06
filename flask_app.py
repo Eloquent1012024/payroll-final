@@ -18,35 +18,48 @@ def send_payroll():
             return
 
         try:
+            # We read the raw lines, including the blank ones
             content = file.stream.read().decode("utf-8")
-            # Filter out empty lines and those dashed separator lines
-            lines = [l.strip() for l in content.splitlines() if l.strip() and not l.strip().startswith('-')]
+            all_lines = content.splitlines()
+            
+            # Remove trailing whitespace but keep the empty lines
+            lines = [l.strip() for l in all_lines]
             
             today = datetime.now().strftime("%d %b %Y")
             count = 0
             
-            # This follows your exact 5-line vertical pattern
-            for i in range(0, len(lines), 5):
-                if i + 4 < len(lines):
-                    # Capturing the actual data from your lines
-                    boss_name = lines[0]     # Line 1
-                    hr_email = lines[1]      # Line 2
-                    staff_name = lines[2]    # Line 3
-                    staff_pos = lines[3]     # Line 4
-                    company_name = lines[4]  # Line 5
+            # We look for 'Scoop' to start a new block
+            for i in range(len(lines)):
+                if "Scoop" in lines[i]:
+                    try:
+                        # Follows your Notepad screenshot layout:
+                        # Scoop (i)
+                        # Email (i+1)
+                        # [Blank Line] (i+2)
+                        # Name (i+3)
+                        # Position (i+4)
+                        # Company (i+5)
+                        
+                        boss = lines[i]
+                        email = lines[i+1]
+                        staff = lines[i+3]
+                        pos = lines[i+4]
+                        comp = lines[i+5]
 
-                    # This prints the REAL data to your screen
-                    yield f"<b>[{today}]</b> Sending Payroll...<br>"
-                    yield f"From: {boss_name} ({hr_email})<br>"
-                    yield f"To: {staff_name}<br>"
-                    yield f"Position: {staff_pos}<br>"
-                    yield f"Company: {company_name}<br>"
-                    yield "--------------------------<br>"
-                    
-                    time.sleep(0.3) 
-                    count += 1
-            
-            yield f"<br><b>Successfully dispatched {count} records!</b>"
+                        yield f"<b>[{today}]</b> Processing...<br>"
+                        yield f"👤 Boss: {boss}<br>"
+                        yield f"📧 HR: {email}<br>"
+                        yield f"👤 Staff: {staff}<br>"
+                        yield f"🛠️ Pos: {pos}<br>"
+                        yield f"🏢 Co: {comp}<br>"
+                        yield "--------------------------<br>"
+                        
+                        count += 1
+                        time.sleep(0.3)
+                    except IndexError:
+                        continue
+
+            yield f"<br><b>Finished! {count} leads captured.</b>"
         except Exception as e:
             yield f"❌ Error: {str(e)}<br>"
 
