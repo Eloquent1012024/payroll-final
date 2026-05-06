@@ -1,82 +1,55 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Payroll Dispatcher</title>
     <style>
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f7f6; display: flex; justify-content: center; padding: 50px; }
-        .container { background: white; padding: 30px; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); width: 100%; max-width: 500px; }
-        h2 { color: #333; text-align: center; margin-bottom: 25px; }
-        .input-group { margin-bottom: 20px; }
-        label { display: block; margin-bottom: 8px; font-weight: bold; color: #555; }
-        input[type="file"] { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; }
-        button { width: 100%; padding: 12px; background-color: #28a745; color: white; border: none; border-radius: 6px; font-size: 16px; cursor: pointer; transition: background 0.3s; }
-        button:hover { background-color: #218838; }
-        #log-container { margin-top: 25px; background: #1e1e1e; color: #00ff00; padding: 15px; border-radius: 8px; height: 250px; overflow-y: auto; font-family: 'Courier New', Courier, monospace; font-size: 13px; line-height: 1.5; border: 2px solid #333; }
+        body { font-family: 'Segoe UI', sans-serif; background: #f0f2f5; padding: 40px; display: flex; justify-content: center; }
+        .container { background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); width: 100%; max-width: 550px; }
+        h2 { color: #1a73e8; margin-top: 0; }
+        .help-text { font-size: 0.9em; color: #666; margin-bottom: 20px; }
+        #log { margin-top: 20px; background: #1e1e1e; color: #4af626; padding: 15px; height: 300px; overflow-y: auto; font-family: 'Consolas', monospace; font-size: 13px; border-radius: 8px; border: 1px solid #333; line-height: 1.6; }
+        button { width: 100%; padding: 14px; background: #1a73e8; color: white; border: none; cursor: pointer; border-radius: 6px; font-weight: bold; font-size: 16px; }
+        button:hover { background: #1557b0; }
     </style>
 </head>
 <body>
-
-<div class="container">
-    <h2>Payroll Dispatcher</h2>
-    
-    <div class="input-group">
-        <label>SMTP Credentials (smtp.txt)</label>
-        <input type="file" id="smtpFile">
+    <div class="container">
+        <h2>Payroll Dispatcher</h2>
+        <p class="help-text">Upload your <b>.txt</b> file. The app will automatically find leads separated by dashed lines.</p>
+        
+        <input type="file" id="leads" style="margin-bottom: 20px; display: block;">
+        
+        <button onclick="start()">Launch Real-Time Dispatch</button>
+        
+        <div id="log">> Ready for file upload...</div>
     </div>
 
-    <div class="input-group">
-        <label>Leads List (leads.csv)</label>
-        <input type="file" id="leadsFile">
-    </div>
-
-    <button onclick="startSending()">Start Real-Time Dispatch</button>
-
-    <div id="log-container">
-        > System ready. Awaiting files...
-    </div>
-</div>
-
-<script>
-    async function startSending() {
-        const smtpFile = document.getElementById('smtpFile').files[0];
-        const leadsFile = document.getElementById('leadsFile').files[0];
-        const logContainer = document.getElementById('log-container');
-
-        if (!smtpFile || !leadsFile) {
-            alert("Please select both the SMTP and Leads files!");
-            return;
-        }
-
-        logContainer.innerHTML = "> Connection established...<br>";
-
-        const formData = new FormData();
-        formData.append('smtp_file', smtpFile);
-        formData.append('leads_file', leadsFile);
-
-        try {
-            const response = await fetch('/send', {
-                method: 'POST',
-                body: formData
-            });
-
-            const reader = response.body.getReader();
-            const decoder = new TextDecoder();
-
-            while (true) {
-                const { done, value } = await reader.read();
-                if (done) break;
+    <script>
+        async function start() {
+            const file = document.getElementById('leads').files[0];
+            if(!file) return alert("Please select your .txt leads file!");
+            
+            const log = document.getElementById('log');
+            log.innerHTML = "> Analyzing data blocks...<br>";
+            
+            const data = new FormData();
+            data.append('leads_file', file);
+            
+            try {
+                const res = await fetch('/send', { method: 'POST', body: data });
+                const reader = res.body.getReader();
+                const decoder = new TextDecoder();
                 
-                const text = decoder.decode(value);
-                logContainer.innerHTML += text;
-                logContainer.scrollTop = logContainer.scrollHeight; // Auto-scrolls to bottom
+                while (true) {
+                    const {done, value} = await reader.read();
+                    if (done) break;
+                    log.innerHTML += decoder.decode(value);
+                    log.scrollTop = log.scrollHeight;
+                }
+            } catch(e) {
+                log.innerHTML += "<br>❌ Connection Lost: " + e;
             }
-        } catch (error) {
-            logContainer.innerHTML += "<br>❌ Connection Error: " + error;
         }
-    }
-</script>
-
+    </script>
 </body>
 </html>

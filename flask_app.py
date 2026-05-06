@@ -1,18 +1,9 @@
 import os
-import pandas as pd
-from flask import Flask, render_template, request, Response, stream_with_context
 import time
+from datetime import datetime
+from flask import Flask, render_template, request, Response, stream_with_context
 
 app = Flask(__name__)
-
-# Mock function for scraping - Update this with your specific scraping logic
-def scrape_leads(target_url):
-    # This is a template; replace with your actual BeautifulSoup/Selenium logic
-    # Ensure it returns a list of dictionaries with 'Company' and 'Position'
-    return [
-        {"Name": "John Doe", "Email": "john@example.com", "Company": "Tech Corp", "Position": "Manager"},
-        {"Name": "Jane Smith", "Email": "jane@example.com", "Company": "Design Hub", "Position": "Director"}
-    ]
 
 @app.route('/')
 def index():
@@ -21,44 +12,48 @@ def index():
 @app.route('/send', methods=['POST'])
 def send_payroll():
     def generate():
-        yield "Starting process...<br>"
+        yield "Reading leads separated by dashed lines...<br>"
         
-        # 1. Get the files
-        smtp_file = request.files.get('smtp_file')
         leads_file = request.files.get('leads_file')
-
-        if not smtp_file or not leads_file:
-            yield "❌ Error: Missing files.<br>"
+        if not leads_file:
+            yield "❌ Error: No leads file uploaded.<br>"
             return
 
-        # 2. Process Leads (Capturing Company & Position)
         try:
-            df = pd.read_csv(leads_file)
-            # Ensure columns exist even if empty
-            for col in ['Company', 'Position']:
-                if col not in df.columns:
-                    df[col] = "N/A"
+            # Read the file
+            content = leads_file.stream.read().decode("utf-8")
             
-            yield f"Found {len(df)} leads. Starting dispatch...<br>"
+            # Split the text into "blocks" using the dashed lines
+            # This handles lines like ----------- or -----------------------
+            blocks = [b.strip() for b in content.split('-') if b.strip() and len(b.strip()) > 20]
             
-            for index, row in df.iterrows():
-                name = row.get('Name', 'Valued Staff')
-                email = row.get('Email')
-                company = row.get('Company', 'the company')
-                pos = row.get('Position', 'Staff')
+            today_date = datetime.now().strftime("%d %b %Y") # e.g., 06 May 2026
+            count = 0
 
-                if email:
+            for block in blocks:
+                # Split each block into individual lines and remove empty ones
+                lines = [line.strip() for line in block.splitlines() if line.strip()]
+                
+                # We expect at least 5 pieces of info per block
+                if len(lines) >= 5:
+                    hr_name = lines[0]
+                    hr_email = lines[1]
+                    staff_name = lines[2]
+                    position = lines[3]
+                    company = lines[4]
+
                     # SIMULATED SENDING LOGIC
-                    time.sleep(1) 
-                    yield f"✅ Sent to {name} ({pos}) at {company} - {email}<br>"
-                else:
-                    yield f"⚠️ Skipped row {index+1}: No email found.<br>"
-
-            yield "<br><b>All tasks completed successfully!</b>"
+                    time.sleep(0.4) 
+                    yield (f"✅ <b>[{today_date}]</b> Sent to: {staff_name}<br>"
+                           f"&nbsp;&nbsp;&nbsp;📍 {position} at {company}<br>")
+                    count += 1
+            
+            yield f"<br><b>Successfully dispatched {count} payroll records!</b>"
+            
         except Exception as e:
-            yield f"❌ Critical Error: {str(e)}<br>"
+            yield f"❌ Error parsing dashed blocks: {str(e)}<br>"
 
     return Response(stream_with_context(generate()))
 
 if __name__ == "__main__":
-    app.run(host='0.0.0.0', port=10000)
+    app.run()
