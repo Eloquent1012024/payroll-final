@@ -1,58 +1,45 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <title>Payroll Dispatcher Pro</title>
+    <title>Payroll Dispatcher</title>
     <style>
-        body { font-family: 'Segoe UI', Tahoma, sans-serif; background: #f4f7f6; display: flex; justify-content: center; padding: 50px; }
-        .app-card { background: white; padding: 30px; border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); width: 100%; max-width: 500px; }
-        h2 { color: #2c3e50; text-align: center; margin-bottom: 20px; }
-        #log-window { margin-top: 20px; background: #1a1a1a; color: #00ff41; padding: 20px; height: 300px; overflow-y: auto; font-family: 'Consolas', monospace; font-size: 13px; border-radius: 10px; border: 1px solid #333; line-height: 1.6; }
-        button { width: 100%; padding: 15px; background: #3498db; color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; transition: 0.3s; }
-        button:hover { background: #2980b9; }
-        input[type="file"] { margin-bottom: 20px; width: 100%; }
+        body { font-family: 'Segoe UI', sans-serif; background: #f4f7f6; display: flex; justify-content: center; padding: 40px; }
+        .box { background: white; padding: 30px; border-radius: 12px; box-shadow: 0 5px 25px rgba(0,0,0,0.1); width: 550px; }
+        #log { margin-top: 20px; background: #121212; color: #00ff41; padding: 20px; height: 350px; overflow-y: auto; font-family: 'Consolas', monospace; border-radius: 8px; line-height: 1.6; }
+        button { width: 100%; padding: 15px; background: #2ecc71; color: white; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 16px; }
+        button:hover { background: #27ae60; }
     </style>
 </head>
 <body>
+    <div class="box">
+        <h2 style="color: #2c3e50;">Payroll Dispatcher</h2>
+        <input type="file" id="fileInput" style="margin-bottom: 20px; display: block;">
+        <button onclick="run()">Launch Dispatch</button>
+        <div id="log">> Ready for file upload...</div>
+    </div>
 
-<div class="app-card">
-    <h2>Payroll Dispatcher</h2>
-    <input type="file" id="payrollFile">
-    <button onclick="startDispatch()">Launch Process</button>
-    <div id="log-window">> System standby...</div>
-</div>
-
-<script>
-    async function startDispatch() {
-        const fileInput = document.getElementById('payrollFile');
-        const log = document.getElementById('log-window');
-        
-        if (!fileInput.files[0]) {
-            alert("Please upload your .txt leads file first!");
-            return;
-        }
-
-        log.innerHTML = "> Establishing connection...<br>";
-        
-        const formData = new FormData();
-        formData.append('leads_file', fileInput.files[0]);
-
-        try {
-            const response = await fetch('/send', { method: 'POST', body: formData });
-            const reader = response.body.getReader();
+    <script>
+        async function run() {
+            const input = document.getElementById('fileInput');
+            if(!input.files[0]) return alert("Select file first!");
+            
+            const log = document.getElementById('log');
+            log.innerHTML = "> Initializing Stream...<br>";
+            
+            const data = new FormData();
+            data.append('leads_file', input.files[0]);
+            
+            const res = await fetch('/send', { method: 'POST', body: data });
+            const reader = res.body.getReader();
             const decoder = new TextDecoder();
-
+            
             while (true) {
-                const { done, value } = await reader.read();
+                const {done, value} = await reader.read();
                 if (done) break;
                 log.innerHTML += decoder.decode(value);
                 log.scrollTop = log.scrollHeight;
             }
-        } catch (err) {
-            log.innerHTML += "<br>❌ Connection Error: " + err;
         }
-    }
-</script>
-
+    </script>
 </body>
 </html>
