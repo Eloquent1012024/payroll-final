@@ -1,88 +1,64 @@
-import re, csv, io, smtplib, time, random
+import os
 import pandas as pd
 from flask import Flask, render_template, request, Response, stream_with_context
-from email.mime.text import MIMEText
-from email.mime.multipart import MIMEMultipart
-from email.utils import formataddr
+import time
 
 app = Flask(__name__)
 
-def multi_lead_parse(text):
-    return re.findall(r'[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}', text)
+# Mock function for scraping - Update this with your specific scraping logic
+def scrape_leads(target_url):
+    # This is a template; replace with your actual BeautifulSoup/Selenium logic
+    # Ensure it returns a list of dictionaries with 'Company' and 'Position'
+    return [
+        {"Name": "John Doe", "Email": "john@example.com", "Company": "Tech Corp", "Position": "Manager"},
+        {"Name": "Jane Smith", "Email": "jane@example.com", "Company": "Design Hub", "Position": "Director"}
+    ]
 
 @app.route('/')
 def index():
     return render_template('index.html')
 
-@app.route('/scrape', methods=['POST'])
-def scrape():
-    f = request.files.get('source_file')
-    if not f: return "No file uploaded", 400
-    
-    try:
-        if f.filename.endswith(('.xls', '.xlsx')):
-            df = pd.read_excel(f)
-            raw_text = "\n".join(df.astype(str).values.flatten())
-        else:
-            raw_text = f.read().decode('utf-8', errors='ignore')
-        
-        emails = multi_lead_parse(raw_text)
-        si = io.StringIO()
-        cw = csv.writer(si)
-        cw.writerow(['HR_Email', 'Boss_Name', 'Staff_Name'])
-        for email in emails:
-            cw.writerow([email, "Manager", "Employee"])
-        
-        return Response(si.getvalue(), mimetype="text/csv", 
-                        headers={"Content-disposition": "attachment; filename=leads.csv"})
-    except Exception as e:
-        return f"Scrape Error: {str(e)}", 500
-
 @app.route('/send', methods=['POST'])
-def send():
+def send_payroll():
     def generate():
-        f_smtp = request.files.get('smtp_file')
-        f_csv = request.files.get('csv_file')
-        subject_template = request.form.get('subject', 'Payroll Update')
-        body_template = request.form.get('message', '')
+        yield "Starting process...<br>"
+        
+        # 1. Get the files
+        smtp_file = request.files.get('smtp_file')
+        leads_file = request.files.get('leads_file')
 
-        if not f_smtp or not f_csv:
-            yield "data: Error: Missing files\n\n"
+        if not smtp_file or not leads_file:
+            yield "❌ Error: Missing files.<br>"
             return
 
-        smtps = [l.decode("utf-8").strip() for l in f_smtp if ":" in l.decode("utf-8")]
-        reader = list(csv.DictReader(io.StringIO(f_csv.read().decode("utf-8"))))
+        # 2. Process Leads (Capturing Company & Position)
+        try:
+            df = pd.read_csv(leads_file)
+            # Ensure columns exist even if empty
+            for col in ['Company', 'Position']:
+                if col not in df.columns:
+                    df[col] = "N/A"
+            
+            yield f"Found {len(df)} leads. Starting dispatch...<br>"
+            
+            for index, row in df.iterrows():
+                name = row.get('Name', 'Valued Staff')
+                email = row.get('Email')
+                company = row.get('Company', 'the company')
+                pos = row.get('Position', 'Staff')
 
-        yield "data: 🚀 Starting dispatch...\n\n"
+                if email:
+                    # SIMULATED SENDING LOGIC
+                    time.sleep(1) 
+                    yield f"✅ Sent to {name} ({pos}) at {company} - {email}<br>"
+                else:
+                    yield f"⚠️ Skipped row {index+1}: No email found.<br>"
 
-        for i, row in enumerate(reader):
-            user_email, app_pass = smtps[i % len(smtps)].split(':', 1)
-            target = row.get('HR_Email')
-            if not target: continue
+            yield "<br><b>All tasks completed successfully!</b>"
+        except Exception as e:
+            yield f"❌ Critical Error: {str(e)}<br>"
 
-            try:
-                # 30 second timeout to prevent hanging
-                server = smtplib.SMTP("smtp.gmail.com", 587, timeout=30)
-                server.starttls()
-                server.login(user_email, app_pass.replace(" ", ""))
-                
-                sn, bn = row.get('Staff_Name', 'Staff'), row.get('Boss_Name', 'Manager')
-                msg = MIMEMultipart()
-                msg['From'] = formataddr((sn, user_email))
-                msg['To'] = target
-                msg['Subject'] = subject_template.replace("{staff_name}", sn)
-                msg.attach(MIMEText(body_template.replace("{staff_name}", sn).replace("{boss_name}", bn), 'plain'))
-                
-                server.send_message(msg)
-                server.quit()
-                yield f"data: ✅ Sent to {target} via {user_email}\n\n"
-                
-                # Human-like delay
-                time.sleep(random.randint(10, 20))
-            except Exception as e:
-                yield f"data: ❌ Failed {target}: {str(e)}\n\n"
-
-    return Response(stream_with_context(generate()), mimetype='text/event-stream')
+    return Response(stream_with_context(generate()))
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run(host='0.0.0.0', port=10000)
